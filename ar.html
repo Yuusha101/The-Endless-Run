@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Endless Run v1.0 - Legacy Edition</title>
+<style>
+/* --- CSS CORE (Giữ nguyên từ bản cũ và thêm History) --- */
+*{box-sizing:border-box}
+body{ margin:0; font-family:'Courier New', monospace; background:#a8e6cf; overflow:hidden; user-select: none; }
+.rainbow { position: absolute; width: 800px; height: 400px; background: radial-gradient(circle at 50% 100%, transparent 40%, violet 45%, indigo 50%, blue 55%, green 60%, yellow 65%, orange 70%, red 75%); bottom: 50px; left: 50%; transform: translateX(-50%); opacity: 0.3; z-index: 0; filter: blur(10px); }
+.cloud { position: absolute; background: white; width: 60px; height: 20px; border-radius: 20px; opacity: 0.9; z-index: 1; }
+.cloud::after, .cloud::before { content: ''; position: absolute; background: white; border-radius: 50%; }
+.cloud::after { width: 30px; height: 30px; top: -15px; left: 10px; }
+.cloud::before { width: 25px; height: 25px; top: -10px; left: 30px; }
+.grass-floor { position: absolute; bottom: 0; width: 100%; height: 30px; background: #56ab2f; z-index: 10; border-top: 4px solid #3d8b22; }
+
+/* --- MENUS --- */
+.menu { position:fixed; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; z-index: 100; background: linear-gradient(to bottom, #87ceeb, #e0f7fa); }
+.btn { width:280px; padding:12px; margin:6px; font-size:16px; border:none; cursor:pointer; color:white; transition: 0.2s; font-weight: bold; box-shadow: 0 4px #333; border-radius: 8px; outline: none; }
+.btn-play { background: #4caf50; } 
+.btn-diff { background: #2196f3; } 
+.btn-shop { background: #ff9800; } 
+.btn-code { background: #e91e63; } 
+.btn-journ { background: #8b4513; } 
+.btn-back { background: #607d8b; }
+.btn-storage { background: #673ab7; }
+.btn-history { background: #3f51b5; }
+.btn:hover { transform: translateY(-3px); box-shadow: 0 7px #222; }
+.btn:active { transform: translateY(0px); box-shadow: 0 2px #222; }
+
+.coin-bar { display: flex; gap: 15px; margin-bottom: 10px; font-weight: bold; font-size: 14px; z-index: 101; background: rgba(255,255,255,0.7); padding: 8px 20px; border-radius: 30px; border: 2px solid #fff; }
+.paper { background:#fff; border:4px solid #555; padding:25px; width:450px; border-radius: 20px; color: #333; box-shadow: 10px 10px 0 rgba(0,0,0,0.1); text-align: center; }
+.list-container { max-height: 250px; overflow-y: auto; margin: 10px 0; text-align: left; border: 1px solid #eee; padding: 5px; }
+.list-item { display:flex; justify-content:space-between; align-items: center; padding:8px; border-bottom: 1px solid #eee; font-size: 13px; }
+
+/* --- GAME ELEMENTS --- */
+#game { position:fixed; inset:0; background: skyblue; display:none; overflow: hidden; }
+#dino { position:absolute; bottom:30px; width:40px; height:40px; z-index: 20; display: flex; justify-content: center; align-items: center; font-size: 20px; color: white; left: 80px; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+.obstacle { bottom:30px; width:0; height:0; border-left:20px solid transparent; border-right:20px solid transparent; border-bottom:40px solid #d32f2f; position:absolute; z-index: 15; }
+.pipe { width:55px; background:#795548; border:3px solid #3e2723; position:absolute; z-index: 15; border-radius: 5px; }
+#ui { position:absolute; top:20px; right:20px; font-size:24px; z-index: 50; font-weight: bold; color: white; text-shadow: 2px 2px #000; text-align: right; }
+
+/* --- SKINS & EFFECTS --- */
+.leaf-helmet { position: absolute; top: -12px; width: 8px; height: 12px; background: #4caf50; border-radius: 10px 10px 0 0; }
+.aura-bloom { position: absolute; width: 50px; height: 12px; background: rgba(255,255,0,0.4); border-radius: 50%; filter: blur(5px); bottom: -6px; animation: pulse 0.8s infinite; }
+.star-dust { position: absolute; background: white; border-radius: 50%; pointer-events: none; animation: fade 0.6s forwards; }
+@keyframes fade { to { opacity: 0; transform: scale(0.2); } }
+@keyframes pulse { from { transform: scale(1); opacity: 0.4; } to { transform: scale(1.4); opacity: 0.8; } }
+</style>
+</head>
+<body>
+
+<div id="deco-layer" style="position:fixed; inset:0; pointer-events:none; z-index: 1;">
+    <div class="rainbow"></div>
+    <div id="menu-clouds"></div>
+</div>
+
+<div class="menu" id="main">
+    <h1 style="font-size: 38px; color: #2e7d32; text-shadow: 2px 2px white;">LEGACY RUN 1.0</h1>
+    <div class="coin-bar">
+        <span>D: <span id="mD">0</span></span> | <span>B: <span id="mB">0</span></span> | <span>S: <span id="mA">0</span></span>
+    </div>
+    <div id="highScoreText" style="margin-bottom: 10px; font-weight: bold; font-size: 12px; color: #555;"></div>
+    <button class="btn btn-play" onclick="openPlay()">PLAY</button>
+    <button class="btn btn-diff" onclick="openDifficulty()">DIFFICULTY: <span id="curDiff">Medium</span></button>
+    <button class="btn btn-storage" onclick="openStorage()">STORAGE</button>
+    <button class="btn btn-history" onclick="openHistory()">HISTORY</button>
+    <button class="btn btn-shop" onclick="openShop()">SHOP</button>
+    <button class="btn btn-code" onclick="useGiftcode()">GIFTCODE</button>
+    <button class="btn btn-journ" onclick="openJournal()">THE JOURNAL</button>
+</div>
+
+<div class="menu" id="play" style="display:none">
+    <h1>CHOOSE MODE</h1>
+    <button class="btn btn-play" onclick="startGame('dino')">Dino Mode</button>
+    <button class="btn btn-play" onclick="startGame('bird')">Bird Mode</button>
+    <button class="btn btn-play" style="background:#000; color:cyan;" onclick="startGame('ship')">Ship Mode</button>
+    <button class="btn btn-back" onclick="back()">Back</button>
+</div>
+
+<div class="menu" id="historyMenu" style="display:none">
+    <div class="paper">
+        <h3>MATCH HISTORY</h3>
+        <div id="historyList" class="list-container"></div>
+        <button class="btn btn-back" style="width:100%" onclick="back()">Back</button>
+    </div>
+</div>
+
+<div class="menu" id="shop" style="display:none">
+    <div class="paper">
+        <h3>EASTER SHOP</h3>
+        <div id="shopList" class="list-container"></div>
+        <button class="btn btn-back" style="width:100%" onclick="back()">Back</button>
+    </div>
+</div>
+
+<div class="menu" id="storageMenu" style="display:none">
+    <div class="paper">
+        <h3>YOUR STORAGE</h3>
+        <div id="storageList" class="list-container"></div>
+        <button class="btn btn-back" style="width:100%" onclick="back()">Back</button>
+    </div>
+</div>
+
+<div class="menu" id="diffMenu" style="display:none">
+    <h1>DIFFICULTY</h1>
+    <button class="btn" style="background:#4caf50" onclick="setDiff(1, 'Medium')">Medium (x1)</button>
+    <button class="btn" style="background:#ff9800" onclick="setDiff(2, 'Insane')">Insane (x2)</button>
+    <button class="btn" style="background:#f44336" onclick="setDiff(3, 'Demon')">Demon (x3)</button>
+    <button class="btn btn-back" onclick="back()">Back</button>
+</div>
+
+<div class="menu" id="journal" style="display:none">
+    <div class="paper">
+        <h3 id="jTitle">Journal</h3>
+        <p id="jText" style="height:120px; line-height: 1.5; font-size: 14px; text-align: left;"></p>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <button class="btn btn-back" style="width:70px; padding:5px" onclick="changeTip(-1)">Prev</button>
+            <span id="jPage">1/8</span>
+            <button class="btn btn-back" style="width:70px; padding:5px" onclick="changeTip(1)">Next</button>
+        </div>
+        <button class="btn btn-back" style="width:100%; margin-top:10px" onclick="back()">Close</button>
+    </div>
+</div>
+
+<div id="game">
+    <div class="grass-floor"></div>
+    <div id="ui">Score: 0<br><small id="ui-mult">x1</small></div>
+    <div id="dino"></div>
+    <div id="msg" style="position:absolute; inset:0; display:none; background:rgba(0,0,0,0.8); z-index: 200; justify-content:center; align-items:center;"></div>
+</div>
+
+<script>
+// --- DATA SYSTEM v1.0 ---
+const STORAGE_KEY = 'LEGACY_RUN_1_0_DATA';
+let gameData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+    coins: { dino: 0, bird: 0, ship: 0 },
+    inventory: { 'grey': true },
+    currentSkin: 'grey',
+    highScores: { dino: 0, bird: 0, ship: 0 },
+    history: [], // [{mode, score, diff, date}]
+    usedCodes: []
+};
+
+function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(gameData)); }
+
+const allItemsMaster = [
+    {id: 'grey', name: 'Classic Grey', color: '#555', face: ':)', cost: {dino:0}},
+    {id: 'blue', name: 'Blue Sky', color: '#2196f3', face: ':)', cost: {dino:50}},
+    {id: 'green', name: 'Easter Grass', color: '#4caf50', face: ':)', cost: {dino:50}},
+    {id: 'pink', name: 'Sweet Candy', color: '#e91e63', face: ':)', cost: {dino:80}},
+    {id: 'purple', name: 'Pro Purple', color: '#9c27b0', face: ':)', cost: {dino:150}},
+    {id: 'astro', name: 'Astronaut Leaf', color: '#ecf0f1', face: 'OwO', hasLeaf: true, cost: {dino:150}},
+    {id: 'dust', name: 'Star Dust', color: '#1a1a2e', face: '☆', hasTrail: true}, 
+    {id: 'legend', name: 'Universe Bloom', color: '#f1c40f', face: '☼', hasAura: true},
+    {id: 'kings', name: 'The Kings', color: '#FFD700', face: '(⌐■_■)', hasCrown: true, isKing: true},
+    {id: 'vietnam', name: 'Vietnam Spirit', color: '#da251d', face: '★', hasNonLa: true},
+    {id: 'master', name: 'Code Master', color: '#00ffff', face: '^o^'}
+];
+
+const shopItems = allItemsMaster.filter(i => i.cost !== undefined);
+const tips = [
+    {t: "💡 MẸO DINO MODE", c: "Nhấn giữ Space khi đang rơi để chuẩn bị cho cú nhảy tiếp theo ngay khi vừa chạm đất."},
+    {t: "💡 MẸO BIRD MODE", c: "Giữ vị trí sát mép ống cống phía dưới để có tầm nhìn tốt hơn."},
+    {t: "💡 MẸO SHIP MODE", c: "Trọng lực cực nhẹ. Hãy 'nhấp nhả' liên tục để phi thuyền lướt đi mượt mà nhất."},
+    {t: "🛠 LỊCH SỬ: KHỞI ĐẦU", c: "[v0.4] Những viên gạch đầu tiên. Cơ chế nhảy Dino và tính điểm sơ khai."},
+    {t: "🎨 LỊCH SỬ: THẨM MỸ", c: "[v0.6] Mở cửa Shop Skin. Nâng cấp hiệu ứng mây, thảm cỏ sinh động."},
+    {t: "🚀 LỊCH SỬ: ĐỘT PHÁ", c: "[v0.8] Ra mắt Ship Mode với logic vật lý phi thuyền độc đáo."},
+    {t: "💾 LỊCH SỬ: LƯU TRỮ", c: "[v0.9] Tích hợp LocalStorage. Lưu vĩnh viễn tài sản của bạn."},
+    {t: "👑 LỊCH SỬ: PHIÊN BẢN 1.0", c: "Hệ thống History, High Score riêng biệt cho 3 mode và Hệ số tiền thưởng x2, x3!"}
+];
+
+let y=0, vy=0, active=false, score=0, gameMode='dino', hold=false, diff=1, tipIdx=0;
+
+function updateStats() {
+    document.getElementById("mD").innerText = gameData.coins.dino;
+    document.getElementById("mB").innerText = gameData.coins.bird;
+    document.getElementById("mA").innerText = gameData.coins.ship;
+    document.getElementById("highScoreText").innerHTML = `TOP DINO: ${gameData.highScores.dino} | BIRD: ${gameData.highScores.bird} | SHIP: ${gameData.highScores.ship}`;
+    saveData();
+}
+
+function applySkin() {
+    const skin = allItemsMaster.find(s => s.id === gameData.currentSkin) || allItemsMaster[0];
+    const dino = document.getElementById("dino");
+    dino.style.background = skin.color;
+    dino.style.border = skin.isKing ? "2px solid #ffa000" : "none";
+    let nonLa = skin.hasNonLa ? `<div style="position:absolute; top:-15px; width:0; height:0; border-left:25px solid transparent; border-right:25px solid transparent; border-bottom:15px solid #f4e4ba; z-index:21;"><div style="position:absolute; top:12px; left:-25px; width:50px; height:2px; background:#e0d0a0;"></div></div>` : '';
+    let crown = skin.hasCrown ? '<div style="position:absolute; top:-20px; font-size:18px;">👑</div>' : '';
+    let leaf = skin.hasLeaf ? '<div class="leaf-helmet"></div>' : '';
+    let aura = skin.hasAura ? '<div class="aura-bloom"></div>' : '';
+    let faceStyle = skin.id === 'vietnam' ? 'color:#ffff00; font-weight:bold;' : '';
+    dino.innerHTML = nonLa + crown + leaf + aura + `<span style="${faceStyle}">${skin.face}</span>`;
+}
+
+function startGame(m) {
+    gameMode = m;
+    switchMenu("game");
+    document.getElementById("game").style.display="block";
+    active = true; score = 0; vy = 0;
+    y = (gameMode==='dino' ? 0 : window.innerHeight/2);
+    document.getElementById("ui").innerHTML = `Score: 0<br><small>x${diff}</small>`;
+    applySkin(); spawn();
+}
+
+function physics() {
+    if(!active) return;
+    const d = document.getElementById("dino");
+    const skin = allItemsMaster.find(s => s.id === gameData.currentSkin);
+
+    if(gameMode==='dino'){
+        if(hold && y===0) { vy=14; d.style.transform = "scaleY(0.7) scaleX(1.3)"; }
+        vy-=0.9; y+=vy;
+        if(y>0) d.style.transform = "scaleY(1.2) scaleX(0.8)";
+        if(y<=0){ y=0; vy=0; d.style.transform = "scale(1)"; }
+    } else {
+        let gravity = (gameMode === 'bird') ? 0.45 : 0.22;
+        if(gameMode === 'bird' && hold) { vy = 6; hold = false; }
+        if(gameMode === 'ship' && hold) vy += 0.5;
+        vy-=gravity; y+=vy;
+        d.style.transform = `rotate(${vy * -3}deg)`;
+        if(y<=0 || y>window.innerHeight-70) gameOver();
+    }
+    d.style.bottom = (y+30)+"px";
+    
+    // Effects
+    if(skin && skin.hasTrail && score%2===0) {
+        let dust = document.createElement('div'); dust.className='star-dust';
+        dust.style.left = '90px'; dust.style.bottom = (y+45)+'px';
+        dust.style.width = dust.style.height = '6px';
+        document.getElementById("game").appendChild(dust);
+        setTimeout(()=>dust.remove(), 600);
+    }
+    if(skin && skin.isKing && score % 3 === 0) {
+        let coin = document.createElement('div'); coin.innerHTML = "💰";
+        coin.style.position = "absolute"; coin.style.left = "90px"; coin.style.bottom = (y + 50) + "px";
+        document.getElementById("game").appendChild(coin);
+        let fY = 0;
+        let cM = setInterval(() => { fY += 3; coin.style.transform = `translateY(${fY}px)`; coin.style.opacity = 1 - (fY/100); if(fY > 100) { clearInterval(cM); coin.remove(); } }, 30);
+    }
+}
+
+function spawn() {
+    if(!active) return;
+    const gameArea = document.getElementById("game");
+    let speed = 7 + (diff * 2.5) + (score/15);
+    let elements = [];
+    if(gameMode==='bird' || gameMode==='ship'){
+        let gap = 200 - (diff * 40);
+        let h = Math.floor(Math.random()*(window.innerHeight-gap-150))+60;
+        const b = document.createElement("div"); b.className="pipe"; b.style.height=h+"px"; b.style.bottom="30px";
+        const t = document.createElement("div"); t.className="pipe"; t.style.height=(window.innerHeight-h-gap-30)+"px"; t.style.top="0px";
+        elements = [b,t];
+    } else {
+        const o = document.createElement("div"); o.className="obstacle"; elements=[o];
+    }
+    elements.forEach(el => { el.style.right="-60px"; gameArea.appendChild(el); });
+    let x = -60;
+    const move = setInterval(()=>{
+        if(!active){ clearInterval(move); elements.forEach(e=>e.remove()); return; }
+        x += speed;
+        elements.forEach(e => {
+            e.style.right = x + "px";
+            let a = document.getElementById("dino").getBoundingClientRect();
+            let b = e.getBoundingClientRect();
+            if(a.right>b.left+8 && a.left<b.right-8 && a.bottom>b.top+8 && a.top<b.bottom-8) gameOver();
+        });
+        if(x > window.innerWidth + 100){
+            score++; document.getElementById("ui").innerHTML = `Score: ${score}<br><small>x${diff}</small>`;
+            clearInterval(move); elements.forEach(e=>e.remove());
+        }
+    }, 20);
+    setTimeout(spawn, Math.max(700, 1800 - (diff * 250) - (score*12)));
+}
+
+function gameOver() {
+    active = false;
+    let multiplier = diff; // 1, 2, 3
+    let earned = score * multiplier;
+    
+    // Cộng tiền
+    if(gameMode==='dino') gameData.coins.dino += earned;
+    else if(gameMode==='bird') gameData.coins.bird += earned;
+    else gameData.coins.ship += earned;
+    
+    // Check High Score riêng từng mode
+    if(score > gameData.highScores[gameMode]) gameData.highScores[gameMode] = score;
+    
+    // Lưu History
+    let diffName = diff===1?"Medium":diff===2?"Insane":"Demon";
+    gameData.history.unshift({
+        mode: gameMode.toUpperCase(),
+        score: score,
+        earned: earned,
+        diff: diffName,
+        date: new Date().toLocaleTimeString()
+    });
+    if(gameData.history.length > 10) gameData.history.pop();
+    
+    updateStats();
+    document.getElementById("msg").style.display="flex";
+    document.getElementById("msg").innerHTML=`<div class='paper'><h2>GAME OVER</h2><p>${gameMode.toUpperCase()} | Score: ${score}</p><p style='color:gold'>+${earned} Coins (x${diff})</p><button class='btn btn-play' onclick='location.reload()'>RETRY</button></div>`;
+}
+
+function switchMenu(id){ document.querySelectorAll(".menu").forEach(m=>m.style.display="none"); if(id!=="game") document.getElementById("game").style.display="none"; document.getElementById(id).style.display="flex"; updateStats(); }
+function back(){ switchMenu("main"); }
+function openPlay(){ switchMenu("play"); }
+function openDifficulty(){ switchMenu("diffMenu"); }
+function openJournal(){ switchMenu("journal"); showTip(); }
+function setDiff(n, name){ diff=n; document.getElementById("curDiff").innerText=name; back(); }
+
+function openHistory() {
+    switchMenu("historyMenu");
+    const list = document.getElementById("historyList"); list.innerHTML = "";
+    if(gameData.history.length === 0) list.innerHTML = "<center>No data yet!</center>";
+    gameData.history.forEach(h => {
+        const div = document.createElement("div"); div.className = "list-item";
+        div.innerHTML = `<span><b>${h.mode}</b> (${h.diff})</span><span>${h.score} pts (+${h.earned})</span>`;
+        list.appendChild(div);
+    });
+}
+
+function openShop() {
+    switchMenu("shop");
+    const list = document.getElementById("shopList"); list.innerHTML = "";
+    shopItems.forEach(item => {
+        const owned = gameData.inventory[item.id];
+        const div = document.createElement("div"); div.className = "list-item";
+        div.innerHTML = `<span><div style="width:12px;height:12px;background:${item.color};display:inline-block;margin-right:5px"></div>${item.name}</span><span>${owned ? 'OWNED' : item.cost.dino+'D'}</span>`;
+        div.onclick = () => { if(!owned && gameData.coins.dino >= item.cost.dino) { gameData.coins.dino -= item.cost.dino; gameData.inventory[item.id] = true; openShop(); } };
+        list.appendChild(div);
+    });
+}
+
+function openStorage() {
+    switchMenu("storageMenu");
+    const list = document.getElementById("storageList"); list.innerHTML = "";
+    allItemsMaster.filter(i => gameData.inventory[i.id]).forEach(item => {
+        const div = document.createElement("div"); div.className = "list-item";
+        div.innerHTML = `<span>${item.name}</span><span>${gameData.currentSkin === item.id ? 'EQUIPPED' : 'USE'}</span>`;
+        div.onclick = () => { gameData.currentSkin = item.id; applySkin(); openStorage(); };
+        list.appendChild(div);
+    });
+}
+
+function useGiftcode() {
+    let input = prompt("ENTER GIFTCODE:");
+    if(!input) return;
+    let code = input.toUpperCase().trim();
+    if(gameData.usedCodes.includes(code)) return alert("Used!");
+    let msg = "";
+    if(code === "VIETNAMSVBETA") { gameData.inventory['vietnam'] = true; msg = "Vietnam Spirit!"; }
+    else if(code === "KINGS") {
+        let usage = parseInt(localStorage.getItem('GLOBAL_KINGS_LIMIT') || "0");
+        if(usage >= 10) return alert("OUT OF STOCK!");
+        gameData.inventory['kings'] = true;
+        localStorage.setItem('GLOBAL_KINGS_LIMIT', (usage + 1).toString());
+        msg = "The Kings! (Remaining: " + (9-usage) + ")";
+    }
+    else if(code === "GEMINI") { gameData.coins.dino+=200; gameData.coins.bird+=200; msg="200 Coins!"; }
+    else if(code === "PROPLAYER") { gameData.coins.dino+=500; msg="500 Dino Coins!"; }
+    else { alert("Invalid!"); return; }
+    gameData.usedCodes.push(code);
+    updateStats(); alert("SUCCESS: " + msg);
+}
+
+function changeTip(n){ tipIdx=(tipIdx+n+tips.length)%tips.length; showTip(); }
+function showTip(){ document.getElementById("jTitle").innerText=tips[tipIdx].t; document.getElementById("jText").innerText=tips[tipIdx].c; document.getElementById("jPage").innerText=(tipIdx+1)+"/"+tips.length; }
+
+function createMenuClouds() {
+    const c = document.getElementById("menu-clouds");
+    for(let i=0; i<4; i++){
+        let div = document.createElement('div'); div.className='cloud';
+        div.style.top = (Math.random()*200)+'px'; div.style.left = (Math.random()*window.innerWidth)+'px';
+        c.appendChild(div);
+        let speed = 0.5 + Math.random(); let x = parseFloat(div.style.left);
+        function move(){ x-=speed; if(x<-100) x=window.innerWidth+100; div.style.left=x+'px'; requestAnimationFrame(move); }
+        move();
+    }
+}
+
+window.addEventListener("mousedown",()=>hold=true); window.addEventListener("mouseup",()=>hold=false);
+document.addEventListener("keydown",e=>{if(e.code==="Space")hold=true;}); document.addEventListener("keyup",e=>{if(e.code==="Space")hold=false;});
+createMenuClouds(); updateStats(); applySkin(); setInterval(physics, 20);
+</script>
+</body>
+</html>
